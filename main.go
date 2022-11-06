@@ -1,14 +1,16 @@
 package main
 
 import (
-	"fmt"
+    "bytes"
+    "fmt"
 	"github.com/spf13/cobra"
-	"os"
+    "io/ioutil"
+    "os"
 	"strings"
 	"text/template"
 )
 
-const TEMPLATE_OPTIONS = "missingkey=error"
+const TemplateOptions = "missingkey=error"
 
 var templaterCmd = &cobra.Command{
 	Use:   "templater",
@@ -23,12 +25,27 @@ var templaterCmd = &cobra.Command{
 		vars, err := flags.GetStringArray("var")
 		if err != nil {
 			return err
-		}
+        }
+        outputFilename, err := flags.GetString("output")
+        if err != nil {
+            return err
+        }
 
-		data, err := buildDataMap(vars)
-		fmt.Printf("input: %v data: %v\n", input, data)
-		doStuff()
-		return nil
+
+        data, err := buildDataMap(vars)
+        if err != nil {
+            return err
+        }
+        inputContents, err := ioutil.ReadFile(input)
+        if err != nil {
+            return err
+        }
+        outputContents, err := renderTemplate(string(inputContents), data)
+        if err != nil {
+            return err
+        }
+        os.WriteFile(outputFilename, outputContents.Bytes(), 0644)
+        return nil
 	},
 }
 
@@ -44,36 +61,22 @@ func buildDataMap(vars []string) (map[string]string, error) {
 	return data, nil
 }
 
-func makeTemplate(templateFilename string) (*template.Template, error) {
-	b, err := os.ReadFile(templateFilename)
-	if err != nil {
-		return nil, err
-	}
-	return template.New("").Option(TEMPLATE_OPTIONS).Parse(string(b))
+func makeTemplate(input string) (*template.Template, error) {
+	return template.New("").Option(TemplateOptions).Parse(input)
 }
 
-func renderTemplate(inputFilename string, outputFilename string, data map[string]string) error {
-	tmpl, err := ytmakeTemplate(inputFilename)
-}
-
-func doStuff() {
-	data := make(map[string]string)
-	data["a"] = "foo"
-	data["b"] = "bar"
-	data["c"] = "baz"
-
-	tmpl, err := template.New("").Option("missingkey=error").Parse("The value of a is {{.a}} the value of b is {{.c}}\n")
-	if err != nil {
-		panic(err)
-	}
-
-	err = tmpl.Execute(os.Stdout, data)
-	if err != nil {
-		panic(err)
-	}
-	os.Stdout.Sync()
-	os.Stdout.Close()
-
+func renderTemplate(input string, data map[string]string) (*bytes.Buffer, error) {
+    tmpl, err := makeTemplate(input)
+    if err != nil {
+        return nil, err
+    }
+    buffer := &bytes.Buffer{}
+    err = tmpl.Execute(buffer, data)
+    if err != nil {
+        return nil, err
+    }
+    //zs := buffer.String()
+    return buffer, nil
 }
 
 func run() error {
@@ -85,7 +88,6 @@ func run() error {
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -108,10 +110,10 @@ func configureFlags(command *cobra.Command) error {
 	flags.StringArrayP("var", "v", []string{}, "key=value, can be repeated")
 
 	flags.StringP("output", "o", "", "output filename")
-	//err = command.MarkFlagRequired("output")
-	//if err != nil {
-	//	return err
-	//}
+	err = command.MarkFlagRequired("output")
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

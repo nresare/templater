@@ -28,3 +28,18 @@ func Test_buildDataMap_malformed(t *testing.T) {
 		t.Errorf("Expected error '%s' but received '%s'", expectedError, err.Error())
 	}
 }
+
+func Test_render_template(t *testing.T) {
+    data := map[string]string {
+        "a": "x",
+    }
+    out, err := renderTemplate("value of a: {{.a}}", data)
+
+    if err != nil {
+        t.Error(err)
+    }
+    expected := "value of a: x"
+    if out.String() != expected {
+        t.Errorf("expected '%s' but found '%s'", expected, out)
+    }
+}
