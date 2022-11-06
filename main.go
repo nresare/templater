@@ -1,11 +1,10 @@
 package main
 
 import (
-    "bytes"
-    "fmt"
+	"fmt"
 	"github.com/spf13/cobra"
-    "io/ioutil"
-    "os"
+	"io"
+	"os"
 	"strings"
 	"text/template"
 )
@@ -25,27 +24,29 @@ var templaterCmd = &cobra.Command{
 		vars, err := flags.GetStringArray("var")
 		if err != nil {
 			return err
-        }
-        outputFilename, err := flags.GetString("output")
-        if err != nil {
-            return err
-        }
+		}
+		outputFilename, err := flags.GetString("output")
+		if err != nil {
+			return err
+		}
 
-
-        data, err := buildDataMap(vars)
-        if err != nil {
-            return err
-        }
-        inputContents, err := ioutil.ReadFile(input)
-        if err != nil {
-            return err
-        }
-        outputContents, err := renderTemplate(string(inputContents), data)
-        if err != nil {
-            return err
-        }
-        os.WriteFile(outputFilename, outputContents.Bytes(), 0644)
-        return nil
+		data, err := buildDataMap(vars)
+		if err != nil {
+			return err
+		}
+		inputContents, err := os.ReadFile(input)
+		if err != nil {
+			return err
+		}
+		output, err := os.Create(outputFilename)
+		if err != nil {
+			return err
+		}
+		err = renderTemplate(string(inputContents), input, data, output)
+		if err != nil {
+			return err
+		}
+		return nil
 	},
 }
 
@@ -61,22 +62,17 @@ func buildDataMap(vars []string) (map[string]string, error) {
 	return data, nil
 }
 
-func makeTemplate(input string) (*template.Template, error) {
-	return template.New("").Option(TemplateOptions).Parse(input)
-}
+func renderTemplate(input string, templateName string, data map[string]string, output io.Writer) error {
+	tmpl, err := template.New(templateName).Option(TemplateOptions).Parse(input)
+	if err != nil {
+		return err
+	}
 
-func renderTemplate(input string, data map[string]string) (*bytes.Buffer, error) {
-    tmpl, err := makeTemplate(input)
-    if err != nil {
-        return nil, err
-    }
-    buffer := &bytes.Buffer{}
-    err = tmpl.Execute(buffer, data)
-    if err != nil {
-        return nil, err
-    }
-    //zs := buffer.String()
-    return buffer, nil
+	err = tmpl.Execute(output, data)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func run() error {
@@ -94,7 +90,8 @@ func run() error {
 func main() {
 	err := run()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		// explicitly ignore error writing to Stderr, as there is nowhere else to signal the error
+		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(-1)
 	}
 }
