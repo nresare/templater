@@ -23,8 +23,8 @@ func Test_render_template(t *testing.T) {
 
 func Test_render_template_unknown_key(t *testing.T) {
 	empty := map[string]string{}
-	err := renderTemplate("{{.nonexistent}}", "filename.tmpl", empty, &bytes.Buffer{})
-	expected := "template: filename.tmpl:1:2: executing \"filename.tmpl\" at <.nonexistent>: map has no entry for key \"nonexistent\""
+	err := renderTemplate("{{.none}}", "filename.tmpl", empty, &bytes.Buffer{})
+	expected := "template: filename.tmpl:1:2: executing \"filename.tmpl\" at <.none>: map has no entry for key \"none\""
 	if err.Error() != expected {
 		t.Errorf("expected '%s' but found '%s'", expected, err.Error())
 	}

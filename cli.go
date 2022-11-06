@@ -8,7 +8,7 @@ import (
 )
 
 func failWithUsage(error string) {
-	fmt.Fprintf(os.Stderr, "%s\n\n", error)
+	_, _ = fmt.Fprintf(os.Stderr, "%s\n\n", error)
 	pflag.Usage()
 	os.Exit(-1)
 }
